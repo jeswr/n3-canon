@@ -91,11 +91,22 @@ describe('toCanonical', () => {
       .toEqual('_:c14n0 <urn:p> _:c14n1 .\n_:c14n0 <urn:p> _:c14n2 .\n_:c14n0 <urn:q> "\u{1F600}" .\n');
   });
 
-  it('should write literals and IRIs in canonical N-Quads', () => {
-    expect(toCanonical([quad(namedNode('urn:s\u0001'), namedNode('urn:p'), literal('a\b\f\r\\\u007F\uFFFF', 'en'))]))
-      .toEqual('<urn:s\\u0001> <urn:p> "a\\b\\f\\r\\\\\\u007F\\uFFFF"@en .\n');
-    expect(toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('a', { language: 'ar', direction: 'rtl' }))]))
-      .toEqual('<urn:s> <urn:p> "a"@ar--rtl .\n');
+  it('should write literals in canonical N-Quads', () => {
+    expect(toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('a\b\f\r\\\u0001\u007F￿', 'en'))]))
+      .toEqual('<urn:s> <urn:p> "a\\b\\f\\r\\\\\\u0001\\u007F\\uFFFF"@en .\n');
+  });
+
+  it('should reject invalid IRIs and malformed Unicode', () => {
+    for (const value of ['urn:a b', 'urn:a"', 'urn:a\\', 'urn:\uD800'])
+      expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), namedNode(value))]))
+        .toThrow('Cannot canonicalize the invalid IRI');
+    expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('\uDC00'))]))
+      .toThrow('with malformed Unicode');
+  });
+
+  it('should reject directional language-tagged literals', () => {
+    expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('a', { language: 'ar', direction: 'rtl' }))]))
+      .toThrow('RDFC-1.0 does not define the canonicalization of directional language-tagged literals');
   });
 
   it('should reject variables', () => {
@@ -167,11 +178,13 @@ describe('toCanonical', () => {
     expect(() => canonical(chain, { maxWorkFactor: 3 })).toThrow('Canonicalization exceeded its maximum amount of work');
   });
 
-  it('should canonicalize a view, an N3.js Store and an array of quads', () => {
+  it('should canonicalize a view, an N3.js Store and iterables of quads', () => {
     const view = store1.match(null, null, namedNode('o2'));
     expect(toCanonical(view)).toEqual('<s1> <p1> <o2> .\n');
     expect(toCanonical(new N3Store([...view]))).toEqual('<s1> <p1> <o2> .\n');
     expect(toCanonical([...view])).toEqual('<s1> <p1> <o2> .\n');
+    expect(toCanonical(new Set(view))).toEqual('<s1> <p1> <o2> .\n');
+    expect(toCanonical((function* () { yield* view; })())).toEqual('<s1> <p1> <o2> .\n');
     expect(() => toCanonical(view, { hashAlgorithm: 'MD5' })).toThrow('Unsupported canonicalization hash algorithm: MD5');
   });
 });

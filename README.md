@@ -6,7 +6,7 @@ which N3.js's `Store` does not implement.
 
 It returns the dataset as canonical N-Quads, with blank nodes labeled by RDFC-1.0,
 so isomorphic datasets give identical strings.
-It is synchronous, has no runtime dependencies besides N3.js, and adds about 5.5 KB minified (2.7 KB gzipped).
+It is synchronous, has no runtime dependencies besides N3.js, and adds about 5.8 KB minified (2.8 KB gzipped).
 
 This code was proposed for N3.js in [rdfjs/N3.js#856](https://github.com/rdfjs/N3.js/pull/856).
 If you use it, or would like `toCanonical()` in N3.js itself,
@@ -19,7 +19,7 @@ and it can be considered for the core library.
 npm install n3 n3-canon
 ```
 
-It works with n3 2.x and 3.x, and ships TypeScript declarations (with n3 2.x, also install `@types/n3`).
+It works with n3 2.x and 3.x on Node.js 22 and later, and ships TypeScript declarations.
 
 ## Usage
 
@@ -57,7 +57,8 @@ An N3.js `Store` is read directly through its indexes; anything else is first co
 
 - `hashAlgorithm` (default `'SHA-256'`): another algorithm, such as `'SHA-384'`, needs a `hash` function for it.
 
-It throws on triple terms, blank-node predicates and variables, which RDFC-1.0 does not define.
+It throws on triple terms, directional language-tagged literals, blank-node predicates and variables, which RDFC-1.0 does not define,
+and on invalid IRIs and malformed Unicode, which canonical N-Quads cannot write.
 
 ## Performance
 
@@ -72,6 +73,8 @@ Median time per call in Node.js 22, from `npm run bench`:
 | 100,000 quads, no blank nodes | 140 ms | 145 ms | 154 ms |
 
 ## Development
+
+Use Node.js 22.8 or later, which the coverage thresholds of `npm test` need:
 
 ```sh
 npm ci

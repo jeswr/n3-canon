@@ -1,6 +1,8 @@
 // Runs the W3C RDF Dataset Canonicalization test suite: https://w3c.github.io/rdf-canon/tests/
 // Pass a local checkout of the tests folder as the first argument to run without the network.
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { Parser } from 'n3';
 import { toCanonical } from '../src/index.js';
@@ -9,7 +11,7 @@ const source = process.argv[2] || 'https://w3c.github.io/rdf-canon/tests/';
 
 async function load(path) {
   if (!/^https?:/.test(source))
-    return readFile(new URL(path, `file://${source.replace(/\/?$/, '/')}`), 'utf8');
+    return readFile(new URL(path, pathToFileURL(`${resolve(source)}/`)), 'utf8');
   for (let attempt = 1; ; attempt++) {
     try {
       const response = await fetch(new URL(path, source));

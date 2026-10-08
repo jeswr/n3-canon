@@ -2,7 +2,7 @@
 // See https://www.w3.org/TR/rdf-canon/
 
 const XSD_STRING = 'http://www.w3.org/2001/XMLSchema#string';
-// Characters that canonical N-Quads escapes: U+0000–U+001F, `"`, `\`, U+007F, U+FFFE and U+FFFF
+// Characters that canonical N-Quads escapes in literals: U+0000–U+001F, `"`, `\`, U+007F, U+FFFE and U+FFFF
 const escapable = /[^ !#-\[\]-~\u0080-\uFFFD]/g;
 const escapes = { '\\': '\\\\', '"': '\\"', '\t': '\\t', '\n': '\\n', '\r': '\\r', '\b': '\\b', '\f': '\\f' };
 
@@ -215,10 +215,12 @@ export default function canonicalize(store, { hashAlgorithm = 'SHA-256', hash: d
 function encode(term) {
   switch (term.termType) {
   case 'NamedNode':
-    return `<${escape(term.value)}>`;
+    return iri(term.value);
   case 'Literal':
-    return `"${escape(term.value)}"${term.language ? `@${term.language}${term.direction ? `--${term.direction}` : ''}` :
-      term.datatype.value === XSD_STRING ? '' : `^^<${escape(term.datatype.value)}>`}`;
+    if (term.direction)
+      throw new Error('RDFC-1.0 does not define the canonicalization of directional language-tagged literals');
+    return `"${escape(term.value)}"${term.language ? `@${term.language}` :
+      term.datatype.value === XSD_STRING ? '' : `^^${iri(term.datatype.value)}`}`;
   case 'BlankNode':
     return null;
   case 'DefaultGraph':
@@ -228,7 +230,16 @@ function encode(term) {
   }
 }
 
+// Writes an IRI, which canonical N-Quads does not escape
+function iri(value) {
+  if (/[\x00-\x20<>"{}|^`\\]/.test(value) || !value.isWellFormed())
+    throw new Error(`Cannot canonicalize the invalid IRI ${JSON.stringify(value)}`);
+  return `<${value}>`;
+}
+
 function escape(value) {
+  if (!value.isWellFormed())
+    throw new Error(`Cannot canonicalize the literal ${JSON.stringify(value)} with malformed Unicode`);
   return value.replace(escapable, character => escapes[character] ||
     `\\u${character.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
 }
