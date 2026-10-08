@@ -3,9 +3,15 @@ import canonicalize from './canonicalize.js';
 
 // Returns the dataset as canonical N-Quads, with blank nodes labeled by RDFC-1.0.
 // An N3.js Store is read through its indexes; any other dataset or iterable of quads is copied into one first.
-// The Store constructor would take an iterable that is not an array as options, so the quads are added after.
+// They are added one by one: the Store constructor takes an iterable that is not an array as options,
+// and addAll would keep a copy in a lazy view, which would then stop following its store.
 export function toCanonical(dataset, { hashAlgorithm, hash, maxWorkFactor } = {}) {
-  const store = dataset instanceof N3Store ? dataset : new N3Store().addAll(dataset);
+  let store = dataset;
+  if (!(dataset instanceof N3Store)) {
+    store = new N3Store();
+    for (const quad of dataset)
+      store.add(quad);
+  }
   return canonicalize(store, { hashAlgorithm, hash, maxWorkFactor });
 }
 

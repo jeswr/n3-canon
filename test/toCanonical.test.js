@@ -111,6 +111,16 @@ describe('toCanonical', () => {
       .toThrow('RDFC-1.0 does not define the canonicalization of directional language-tagged literals');
     expect(toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('v', namedNode('urn:datatype--ltr')))]))
       .toEqual('<urn:s> <urn:p> "v"^^<urn:datatype--ltr> .\n');
+    expect(toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('a--ltr', 'en'))]))
+      .toEqual('<urn:s> <urn:p> "a--ltr"@en .\n');
+  });
+
+  it('should leave a lazy view following its store', () => {
+    const store = new N3Store([quad(namedNode('urn:s'), namedNode('urn:p'), namedNode('urn:o1'))]);
+    const view = store.match();
+    toCanonical(view);
+    store.add(quad(namedNode('urn:s'), namedNode('urn:p'), namedNode('urn:o2')));
+    expect([...view]).toHaveLength(2);
   });
 
   it('should reject variables', () => {
