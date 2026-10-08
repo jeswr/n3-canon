@@ -97,16 +97,20 @@ describe('toCanonical', () => {
   });
 
   it('should reject invalid IRIs and malformed Unicode', () => {
-    for (const value of ['urn:a b', 'urn:a"', 'urn:a\\', 'urn:\uD800'])
-      expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), namedNode(value))]))
-        .toThrow('Cannot canonicalize the invalid IRI');
-    expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('\uDC00'))]))
-      .toThrow('with malformed Unicode');
+    const s = namedNode('urn:s'), p = namedNode('urn:p');
+    for (const value of ['urn:a b', 'urn:a\u0001', 'urn:a"', 'urn:a\\', 'urn:\uD800', ...'<>{}|^`'].map(c => c.length > 1 ? c : `urn:${c}`))
+      expect(() => toCanonical([quad(s, p, namedNode(value))])).toThrow('Cannot canonicalize the invalid IRI');
+    for (const value of ['urn:bad type', 'urn:\uD800'])
+      expect(() => toCanonical([quad(s, p, literal('x', namedNode(value)))])).toThrow('Cannot canonicalize the invalid IRI');
+    for (const value of ['\uDC00', '\u{1F600}\uD800'])
+      expect(() => toCanonical([quad(s, p, literal(value))])).toThrow('with malformed Unicode');
   });
 
   it('should reject directional language-tagged literals', () => {
     expect(() => toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('a', { language: 'ar', direction: 'rtl' }))]))
       .toThrow('RDFC-1.0 does not define the canonicalization of directional language-tagged literals');
+    expect(toCanonical([quad(namedNode('urn:s'), namedNode('urn:p'), literal('v', namedNode('urn:datatype--ltr')))]))
+      .toEqual('<urn:s> <urn:p> "v"^^<urn:datatype--ltr> .\n');
   });
 
   it('should reject variables', () => {

@@ -217,7 +217,7 @@ function encode(term) {
   case 'NamedNode':
     return iri(term.value);
   case 'Literal':
-    if (term.direction)
+    if (term.language && term.direction)
       throw new Error('RDFC-1.0 does not define the canonicalization of directional language-tagged literals');
     return `"${escape(term.value)}"${term.language ? `@${term.language}` :
       term.datatype.value === XSD_STRING ? '' : `^^${iri(term.datatype.value)}`}`;
